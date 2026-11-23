@@ -165,13 +165,13 @@ public final class PoldiMacro {
                     stop("Sell-Menü wurde geschlossen – Makro gestoppt.");
                     return;
                 }
-                AbstractContainerMenu h = gs.getAbstractContainerMenu();
+                AbstractContainerMenu h = gs.getMenu();
                 if (wantAll()) {
                     // Shift gehalten: ganzes Inventar auf einmal in das Menue schieben
                     burstMode = true;
                     for (Slot bs : h.slots) {
                         if (!(bs.container instanceof Inventory) || !bs.hasItem()) continue;
-                        mc.gameMode.handleInventoryMouseClick(h.containerId, bs.index, 0, ContainerInput.QUICK_MOVE, mc.player);
+                        quickMove(mc, h.containerId, bs.index);
                     }
                     state = S.CLOSING; timer = 2;
                     return;
@@ -179,13 +179,13 @@ public final class PoldiMacro {
                 Slot s = nextSelectedSlot(h);
                 if (s == null) { state = S.CLOSING; return; }
                 lastCount = countInHandler(h);
-                mc.gameMode.handleInventoryMouseClick(h.containerId, s.index, 0, ContainerInput.QUICK_MOVE, mc.player);
+                quickMove(mc, h.containerId, s.index);
                 state = S.FILL_WAIT;
                 timer = Math.max(0, cfg.sellClickDelay);
             }
             case FILL_WAIT -> {
                 if (!(mc.gui.screen() instanceof ContainerScreen gs)) { stop("Sell-Menü wurde geschlossen – Makro gestoppt."); return; }
-                int now = countInHandler(gs.getAbstractContainerMenu());
+                int now = countInHandler(gs.getMenu());
                 // nichts mehr verschoben worden = Menue voll
                 if (now >= lastCount) strikes++; else strikes = 0;
                 state = strikes >= 2 ? S.CLOSING : S.FILLING;
@@ -209,5 +209,32 @@ public final class PoldiMacro {
             }
             default -> {}
         }
+    }
+
+    private static java.lang.reflect.Method clickMethod;
+
+    /** Shift-Klick auf einen Slot. Die Methode wird per Typ gesucht (Name/Reihenfolge aendern sich zwischen Versionen). */
+    private static void quickMove(Minecraft mc, int containerId, int slot) {
+        try {
+            if (clickMethod == null) {
+                for (var m : mc.gameMode.getClass().getMethods()) {
+                    var pt = m.getParameterTypes();
+                    boolean hasInput = false;
+                    for (var t : pt) if (t == ContainerInput.class) hasInput = true;
+                    if (hasInput && pt.length == 5) { clickMethod = m; break; }
+                }
+            }
+            if (clickMethod == null) return;
+            var pt = clickMethod.getParameterTypes();
+            Object[] args = new Object[pt.length];
+            int[] ints = {containerId, slot, 0};
+            int k = 0;
+            for (int i = 0; i < pt.length; i++) {
+                if (pt[i] == int.class) args[i] = ints[Math.min(2, k++)];
+                else if (pt[i] == ContainerInput.class) args[i] = ContainerInput.QUICK_MOVE;
+                else args[i] = mc.player;
+            }
+            clickMethod.invoke(mc.gameMode, args);
+        } catch (Throwable ignored) {}
     }
 }
