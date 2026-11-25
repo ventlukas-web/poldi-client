@@ -16,8 +16,7 @@ public class PoldiShots implements FabricClientGameTest {
         ctx.waitTicks(40);
         shot(ctx, "00-titelbildschirm");
         try (TestSingleplayerContext sp = ctx.worldBuilder().create()) {
-            sp.getClientWorld().waitForChunksRender();
-            ctx.waitTicks(40);
+            ctx.waitTicks(200);
             shot(ctx, "01-ingame-hud");
             int i = 2;
             for (int p : PAGES) {

@@ -26,6 +26,18 @@ jobs:
           if [ -n "$FAPI" ] && [ "$FAPI" != "null" ]; then sed -i "s/^fabric_api_version=.*/fabric_api_version=$FAPI/" gradle.properties; fi
       - name: Xvfb + Mesa
         run: sudo apt-get update -q && sudo apt-get install -y -q xvfb libgl1-mesa-dri mesa-utils
+      - name: API-Signaturen (javap) fuer Entwicklung
+        shell: bash
+        run: |
+          gradle compileJava --no-daemon -q || true
+          J=$(grep -l "net/minecraft/client/gui/components/AbstractButton.class" $(find ~/.gradle .gradle build -name "*.jar" 2>/dev/null) 2>/dev/null | head -1)
+          echo "JAR=$J"
+          mkdir -p api
+          for c in net.minecraft.client.gui.components.AbstractButton net.minecraft.client.gui.components.Button net.minecraft.client.gui.components.AbstractWidget net.minecraft.client.gui.GuiGraphicsExtractor net.minecraft.client.gui.screens.Screen net.minecraft.client.gui.components.WidgetSprites net.minecraft.client.gui.ActiveTextCollector net.minecraft.client.gui.components.Checkbox net.minecraft.client.gui.components.AbstractSliderButton net.minecraft.client.gui.components.CycleButton net.minecraft.client.gui.screens.options.OptionsSubScreen; do
+            javap -p -cp "$J" "$c" > "api/$c.txt" 2>&1 || true
+          done
+          javap -p -cp "$J" -c net.minecraft.client.gui.components.Button\$Plain > api/ButtonPlain.txt 2>&1 || true
+          ls api
       - name: Minecraft starten und Screenshots machen
         shell: bash
         run: set -o pipefail; gradle runClientGameTest --no-daemon --stacktrace 2>&1 | tee shots.log
@@ -34,9 +46,9 @@ jobs:
         shell: bash
         run: |
           mkdir -p /tmp/s; find . -path ./.git -prune -o -name "*.png" -path "*screenshots*" -print -exec cp {} /tmp/s/ \; || true
-          cp shots.log /tmp/s/ 2>/dev/null || true
+          cp shots.log /tmp/s/ 2>/dev/null || true; cp -r api /tmp/s/ 2>/dev/null || true
           git config user.name "github-actions"; git config user.email "actions@github.com"
           git checkout --orphan screenshots; git rm -rfq . >/dev/null 2>&1 || true
-          cp /tmp/s/* . 2>/dev/null || true
+          cp -r /tmp/s/* . 2>/dev/null || true
           git add -A; git commit -qm "Screenshots ${{ github.run_number }}" || true
           git push -f origin screenshots
