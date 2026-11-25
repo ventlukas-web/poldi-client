@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "poldi",
+  "version": "1.0.0",
+  "name": "Poldi Client",
+  "description": "Poldi Client: Survival-Client mit HUDs, Survival-Helfern, PvP-Anzeigen, Streaming-Tools und mehr.",
+  "authors": ["6po"],
+  "environment": "client",
+  "mixins": ["poldi.mixins.json"],
+  "entrypoints": {
+    "client": ["dev.poldi.client.PoldiClient"]
+  },
+  "depends": {
+    "fabricloader": ">=0.19.0",
+    "minecraft": "~26.2",
+    "java": ">=25",
+    "fabric-api": "*"
+  },
+  "icon": "assets/poldi/icon.png"
+}

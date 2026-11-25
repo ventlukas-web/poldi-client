@@ -1,0 +1,28 @@
+Compiled from "Button.java"
+public class net.minecraft.client.gui.components.Button$Plain extends net.minecraft.client.gui.components.Button {
+  protected net.minecraft.client.gui.components.Button$Plain(int, int, int, int, net.minecraft.network.chat.Component, net.minecraft.client.gui.components.Button$OnPress, net.minecraft.client.gui.components.Button$CreateNarration);
+    Code:
+         0: aload_0
+         1: iload_1
+         2: iload_2
+         3: iload_3
+         4: iload         4
+         6: aload         5
+         8: aload         6
+        10: aload         7
+        12: invokespecial #1                  // Method net/minecraft/client/gui/components/Button."<init>":(IIIILnet/minecraft/network/chat/Component;Lnet/minecraft/client/gui/components/Button$OnPress;Lnet/minecraft/client/gui/components/Button$CreateNarration;)V
+        15: return
+
+  protected void extractContents(net.minecraft.client.gui.GuiGraphicsExtractor, int, int, float);
+    Code:
+         0: aload_0
+         1: aload_1
+         2: invokevirtual #7                  // Method extractDefaultSprite:(Lnet/minecraft/client/gui/GuiGraphicsExtractor;)V
+         5: aload_0
+         6: aload_1
+         7: aload_0
+         8: getstatic     #13                 // Field net/minecraft/client/gui/GuiGraphicsExtractor$HoveredTextEffects.NONE:Lnet/minecraft/client/gui/GuiGraphicsExtractor$HoveredTextEffects;
+        11: invokevirtual #19                 // Method net/minecraft/client/gui/GuiGraphicsExtractor.textRendererForWidget:(Lnet/minecraft/client/gui/components/AbstractWidget;Lnet/minecraft/client/gui/GuiGraphicsExtractor$HoveredTextEffects;)Lnet/minecraft/client/gui/ActiveTextCollector;
+        14: invokevirtual #25                 // Method extractDefaultLabel:(Lnet/minecraft/client/gui/ActiveTextCollector;)V
+        17: return
+}
