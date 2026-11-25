@@ -23,7 +23,7 @@ public final class PoldiGlass {
                 Component.literal("Poldi - Anti-Leak Bloecke"), PackActivationType.NORMAL);
             // Rote Vanilla-Buttons und Slider fuer ALLE Menues (Schalter "Button-Design")
             ResourceLoader.registerBuiltinPack(PoldiClient.id("vanilla_buttons"), c,
-                Component.literal("Poldi - Rote Vanilla-Buttons"), PackActivationType.DEFAULT_ENABLED);
+                Component.literal("Poldi - Rote Vanilla-Buttons"), PackActivationType.NORMAL);
         });
     }
 

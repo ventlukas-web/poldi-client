@@ -15,9 +15,11 @@ public class PoldiConfig {
     // Anzeige
     public boolean sound = true;
     public boolean watermark = true;
-    public boolean niceInventory = true;
-    public boolean niceButtons = true;
-    public boolean menuBackground = true;
+    public boolean niceInventory = false;
+    public boolean niceButtons = false;
+    /** 2 = Vanilla-Design (alte rote Einstellungen werden einmalig umgestellt). */
+    public int uiVersion = 0;
+    public boolean menuBackground = false;
     /** Neue Versionen automatisch von GitHub laden. */
     public boolean autoUpdate = true;
     /** Trailer mit Musik beim ersten Spielstart, ueberspringbar. */
@@ -144,6 +146,10 @@ public class PoldiConfig {
     }
 
     private static void fix(PoldiConfig c) {
+        if (c.uiVersion < 2) { // auf Vanilla-Design umstellen
+            c.uiVersion = 2; c.niceButtons = false; c.niceInventory = false; c.menuBackground = false; c.cursorStyle = 0;
+            try { c.save(); } catch (Throwable ignored) {}
+        }
         if (c.orig == null) c.orig = new java.util.HashMap<>();
         if (c.waypoints == null) c.waypoints = new java.util.ArrayList<>();
         if (c.notes == null) c.notes = new java.util.ArrayList<>();

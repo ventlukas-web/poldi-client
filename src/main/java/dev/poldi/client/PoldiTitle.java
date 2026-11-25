@@ -2,9 +2,7 @@ package dev.poldi.client;
 
 import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.fabricmc.fabric.api.client.screen.v1.Screens;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.screens.TitleScreen;
-import net.minecraft.network.chat.Component;
 
 /** Hauptmenue: grosser Beitreten-Button, Mod-Menue-Knopf unten rechts, Branding, Intro-Trailer beim Start. */
 public final class PoldiTitle {
@@ -36,19 +34,6 @@ public final class PoldiTitle {
             // Mod-Menue-Knopf unten rechts
             Screens.getWidgets(screen).add(new PoldiButton(w - 96, h - 36, 88, 20, () -> "Mod-Menü",
                 () -> client.gui.setScreen(new PoldiMenu(screen)), false));
-            ScreenEvents.afterExtract(screen).register((s, g, mx, my, delta) -> {
-                Font f = client.font;
-                Component t = PoldiTheme.title("POLDI CLIENT");
-                float sc = 1.4f;
-                int tw = (int) (f.width(t) * sc);
-                int x = (s.width - tw) / 2 + 8, y = s.height - 30;
-                PoldiLogo.draw(g, x - 20, y - 2, 16);
-                g.pose().pushMatrix();
-                g.pose().translate(x, y);
-                g.pose().scale(sc, sc);
-                g.text(f, t, 0, 0, PoldiTheme.PRIMARY, true);
-                g.pose().popMatrix();
-            });
         });
     }
 }

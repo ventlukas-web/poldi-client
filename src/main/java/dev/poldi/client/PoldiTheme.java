@@ -5,14 +5,16 @@ import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.Style;
 
-/** Rotes Vanilla-Design: eckige Flaechen mit Bevel-Kanten wie die Minecraft-Buttons, leicht rot getoent. */
+/** Vanilla-Design: Farben und Flaechen wie in Minecraft selbst (weisser/grauer Text, schwarze Flaechen, graue Buttons). */
 public final class PoldiTheme {
     /** Hauptfarbe (Standard Rot) und Zweitfarbe (Standard Hellrot), einstellbar im Design. */
-    public static int PRIMARY = 0xFFDC2626;
-    public static int SECOND = 0xFFF87171;
-    public static int BG = 0xD0140606;
+    public static int PRIMARY = 0xFFFFFFFF;
+    public static int SECOND = 0xFFAAAAAA;
+    public static int BG = 0x90000000;
+    /** Nur fuer den Trailer (der bleibt im Poldi-Rot). */
+    public static final int RED = 0xFFDC2626, RED2 = 0xFFF87171;
     public static final int TEXT = 0xFFFFFFFF;
-    public static final int MUTED = 0xFFC9B4B4;
+    public static final int MUTED = 0xFFAAAAAA;
     public static final int GOOD = 0xFF86EFAC;
     public static final int BAD = 0xFFFDA4AF;
     public static final int WARN = 0xFFFBBF24;
@@ -31,12 +33,9 @@ public final class PoldiTheme {
     public static String toHex(int argb) { return String.format("#%06X", argb & 0xFFFFFF); }
 
     public static void reload(PoldiConfig c) {
-        Integer a = parseHex(c.color1), b = parseHex(c.color2);
-        if (a != null) PRIMARY = a;
-        if (b != null) SECOND = b;
-        int op = Math.max(32, Math.min(255, c.bgOpacity));
-        Integer base = parseHex(c.themeBase);
-        BG = alpha(lerp(base != null ? base : 0xFF0C0505, PRIMARY, 0.08f), op);
+        // Vanilla: feste Minecraft-Farben, nur die Deckkraft der Flaechen ist einstellbar
+        PRIMARY = 0xFFFFFFFF; SECOND = 0xFFAAAAAA;
+        BG = alpha(0xFF000000, Math.max(32, Math.min(200, c.bgOpacity - 64)));
     }
 
     public static int bgA(int a) { return alpha(BG, ((BG >>> 24) * a) / 255); }
@@ -89,7 +88,11 @@ public final class PoldiTheme {
 
     /** Button im Vanilla-Look: schwarzer Rand, helle Kante oben/links, dunkle Kante unten/rechts. */
     public static void bevel(GuiGraphicsExtractor g, int x, int y, int w, int h, int base, boolean hover, boolean active) {
-        int fill = active ? base : lerp(base, 0xFF2A2020, 0.6f);
+        // Vanilla-Grau: Helligkeit der Wunschfarbe behalten (gedrueckt = heller), Farbton weg
+        int lum = (((base >> 16) & 0xFF) * 3 + ((base >> 8) & 0xFF) * 6 + (base & 0xFF)) / 10;
+        int gv = Math.max(0x50, Math.min(0xA8, 0x50 + lum * 0x58 / 255));
+        int fill = (base & 0xFF000000) | (gv << 16) | (gv << 8) | gv;
+        if (!active) fill = (base & 0xFF000000) | 0x2C2C2C;
         g.fill(x, y, x + w, y + h, hover ? 0xFFFFFFFF : 0xFF000000);
         g.fill(x + 1, y + 1, x + w - 1, y + h - 1, fill);
         g.fill(x + 1, y + 1, x + w - 1, y + 2, shade(fill, 1.35f));
@@ -100,9 +103,7 @@ public final class PoldiTheme {
 
     /** Panel: dunkel, leicht durchsichtig, schwarzer Rand mit roter Innenlinie. */
     public static void panel(GuiGraphicsExtractor g, int x, int y, int w, int h, int bgAlpha) {
-        g.fill(x, y, x + w, y + h, alpha(BG, bgAlpha));
-        outline(g, x, y, w, h, 0xFF000000);
-        outline(g, x + 1, y + 1, w - 2, h - 2, alpha(PRIMARY, 0x90));
+        g.fill(x, y, x + w, y + h, alpha(0xFF000000, Math.min(0xC0, bgAlpha)));
     }
 
     public static void panel(GuiGraphicsExtractor g, int x, int y, int w, int h) { panel(g, x, y, w, h, (BG >>> 24)); }
@@ -122,7 +123,7 @@ public final class PoldiTheme {
         int cx = x, n = Math.max(1, s.length() - 1);
         for (int i = 0; i < s.length(); i++) {
             String ch = String.valueOf(s.charAt(i));
-            g.text(f, ch, cx, y, lerp(PRIMARY, SECOND, (float) i / n * 0.6f), true);
+            g.text(f, ch, cx, y, TEXT, true);
             cx += f.width(ch);
         }
         return cx - x;

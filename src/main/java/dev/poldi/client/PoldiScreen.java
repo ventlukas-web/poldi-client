@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 
-/** Basis fuer alle Poldi-Screens: Buttons im roten Vanilla-Stil. */
+/** Basis fuer alle Poldi-Screens: Vanilla-Buttons und Vanilla-Hintergrund. */
 public abstract class PoldiScreen extends Screen {
     protected final List<PoldiButton> btns = new ArrayList<>();
 
@@ -52,9 +52,7 @@ public abstract class PoldiScreen extends Screen {
 
     /** Standard-Hintergrund: dunkel mit leichtem Rotstich. */
     protected void darkBackground(GuiGraphicsExtractor g, int alpha) {
-        g.fillGradient(0, 0, width, height,
-            PoldiTheme.alpha(PoldiTheme.lerp(0xFF060303, PoldiTheme.PRIMARY, 0.10f), alpha),
-            PoldiTheme.alpha(PoldiTheme.lerp(0xFF060303, PoldiTheme.PRIMARY, 0.04f), alpha));
+        g.fillGradient(0, 0, width, height, PoldiTheme.alpha(0xFF101010, Math.min(0xC0, alpha)), PoldiTheme.alpha(0xFF101010, Math.min(0xD0, alpha + 0x10)));
     }
 
     protected static void open(Screen s) { Minecraft.getInstance().gui.setScreen(s); }

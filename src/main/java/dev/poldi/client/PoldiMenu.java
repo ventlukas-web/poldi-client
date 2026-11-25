@@ -836,8 +836,8 @@ public class PoldiMenu extends PoldiScreen {
     @Override
     public void extractBackground(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         boolean inWorld = Minecraft.getInstance().level != null;
-        darkBackground(g, inWorld ? 0x60 : 0xF0);
-        PoldiTheme.panel(g, left - 12, top - 28, PW + 24, panelBottom + 28, inWorld ? 0xC8 : 0xFF);
+        super.extractBackground(g, mouseX, mouseY, delta); // Vanilla-Hintergrund (Panorama/Weltabdunklung wie in den Optionen)
+        PoldiTheme.panel(g, left - 12, top - 28, PW + 24, panelBottom + 28, inWorld ? 0x90 : 0xA0);
         PoldiLogo.draw(g, left, top - 22, 12);
         PoldiTheme.gradientText(g, font, PoldiClient.NAME, left + 16, top - 20);
     }
