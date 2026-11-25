@@ -118,7 +118,7 @@ public final class Main extends JPanel {
                 java.time.Instant built = java.time.Instant.parse(stamp);
                 var rel = Json.obj(Json.parse(Http.get("https://api.github.com/repos/" + Config.LAUNCHER_REPO + "/releases/tags/" + Config.RELEASE_TAG, java.util.Map.of("Accept", "application/vnd.github+json"))));
                 java.time.Instant pub = java.time.Instant.parse(Json.str(rel.get("published_at")));
-                if (pub.isAfter(built.plusSeconds(900))) SwingUtilities.invokeLater(() -> updBtn.setVisible(true));
+                if (pub.isAfter(built.plusSeconds(900))) SwingUtilities.invokeLater(() -> { if (!busy && (game == null || !game.isAlive())) selfUpdate(); else updBtn.setVisible(true); }); // automatisch aktualisieren
             } catch (Exception ignored) {} // Entwicklungsstand ohne build.txt oder offline: nichts anzeigen
         }, "launcher-update").start();
     }

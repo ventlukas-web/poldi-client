@@ -5,6 +5,9 @@ on:
       - 'poldi-launcher/**'
       - '.github/workflows/poldi-launcher.yml'
   workflow_dispatch:
+  workflow_run:            # nach jedem Mod-Build neu bauen, damit die neueste Mod in der Exe steckt
+    workflows: ["Build Poldi Client"]
+    types: [completed]
 permissions:
   contents: write
 jobs:
@@ -14,6 +17,7 @@ jobs:
       run:
         shell: bash
         working-directory: poldi-launcher
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -21,12 +25,18 @@ jobs:
           distribution: temurin
           java-version: '25'   # Minecraft 26.x braucht Java 25
       - name: Poldi Client Mod einbauen
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           mkdir -p out/bundled rel
           J=$(ls mod/poldi-client*.jar 2>/dev/null | grep -v -e sources -e dev | head -1 || true)
+          if [ -z "$J" ]; then
+            T=$(gh release list --limit 50 --json tagName --jq '[.[].tagName|select(startswith("build-"))]|sort_by(ltrimstr("build-")|tonumber)|last')
+            if [ -n "$T" ]; then gh release download "$T" -p "poldi-client-*.jar" -D modtmp && J=$(ls modtmp/poldi-client-*.jar | grep -v -e sources -e dev | head -1); fi
+          fi
           if [ -n "$J" ]; then
             cp "$J" out/bundled/poldi-client.jar
-            cp "$J" "rel/$(basename "$J")"
+            case "$J" in mod/*) cp "$J" "rel/$(basename "$J")";; esac
           else
             echo "::warning::Keine poldi-client*.jar in poldi-launcher/mod/ – Launcher startet 26.2 erst, wenn die Mod da ist."
           fi
