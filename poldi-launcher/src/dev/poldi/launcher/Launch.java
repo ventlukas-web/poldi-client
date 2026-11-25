@@ -28,7 +28,7 @@ public final class Launch {
         v.put("version_type", "PoldiClient"); v.put("resolution_width", "854"); v.put("resolution_height", "480");
 
         List<String> cmd = new ArrayList<>();
-        cmd.add(javaBin());
+        cmd.add(spec.java() != null ? spec.java().toString() : javaBin());
         cmd.add("-Xmx" + cfg.ramMb + "M"); cmd.add("-Xms" + Math.min(cfg.ramMb, 1024) + "M");
         cmd.addAll(expand(spec.jvm(), v));
         if (!cmd.contains("-cp") && !cmd.contains("-classpath")) { cmd.add("-cp"); cmd.add(cp.toString()); }

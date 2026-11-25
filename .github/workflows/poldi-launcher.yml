@@ -56,4 +56,10 @@ jobs:
           gh release delete poldi-launcher-latest --yes --cleanup-tag || true
           shopt -s nullglob; MODJAR=(rel/*.jar)
           gh release create poldi-launcher-latest PoldiClient-windows.zip dist/poldi-launcher.jar "${MODJAR[@]}" \
-            --title "Poldi Client" --notes "Poldi Client Launcher: ZIP entpacken, PoldiClient.exe starten. Hauptversion 26.2 mit Poldi Client Mod, alle anderen Versionen mit Fabric."
+            --latest=false --title "Poldi Client Launcher" --notes "Poldi Client Launcher: ZIP entpacken, PoldiClient.exe starten. Hauptversion 26.2 mit Poldi Client Mod, alle anderen Versionen mit Fabric."
+      - name: Neuesten Mod-Build als "Latest" markieren (Auto-Update der Mod liest releases/latest)
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          T=$(gh release list --limit 50 --json tagName --jq '[.[].tagName|select(startswith("build-"))]|sort_by(ltrimstr("build-")|tonumber)|last')
+          if [ -n "$T" ]; then gh release edit "$T" --latest; fi

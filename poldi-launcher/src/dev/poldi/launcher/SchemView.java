@@ -14,8 +14,13 @@ public final class SchemView extends JComponent {
     private String hint = "Datei öffnen oder .litematic hierher ziehen";
     private int lastX, lastY, button;
     private boolean fast = false;
-    private java.awt.image.BufferedImage lo, full;
+    // Rendern laeuft in einem eigenen Thread: die Oberflaeche bleibt fluessig, auch bei riesigen Schematics.
+    private volatile java.awt.image.BufferedImage shown;
     private boolean dirty = true;
+    private final java.util.concurrent.atomic.AtomicInteger gen = new java.util.concurrent.atomic.AtomicInteger();
+    private final java.util.concurrent.ExecutorService worker = java.util.concurrent.Executors.newSingleThreadExecutor(r -> { Thread t = new Thread(r, "schem-render"); t.setDaemon(true); t.setPriority(Thread.MIN_PRIORITY + 1); return t; });
+    private volatile long lastMs = 0;
+    private final java.util.HashMap<Integer, Color> colors = new java.util.HashMap<>();
     private final javax.swing.Timer settle = new javax.swing.Timer(160, e -> { fast = false; dirty = true; repaint(); });
     { settle.setRepeats(false); }
     private void interact() { fast = true; dirty = true; settle.restart(); repaint(); }
@@ -45,7 +50,7 @@ public final class SchemView extends JComponent {
         });
     }
 
-    public void testSet(Schem sm, float yw, float pt, float d, float x, float y, float z) { m = sm; yaw = yw; pitch = pt; dist = d; tx = x; ty = y; tz = z; yMin = 0; yMax = sm.sy; }
+    public void testSet(Schem sm, float yw, float pt, float d, float x, float y, float z) { shown = null; dirty = true; m = sm; yaw = yw; pitch = pt; dist = d; tx = x; ty = y; tz = z; yMin = 0; yMax = sm.sy; }
 
     public Runnable onLoaded = () -> {};
 
@@ -56,9 +61,9 @@ public final class SchemView extends JComponent {
         new Thread(() -> {
             try {
                 Schem s = Schem.load(f);
-                SwingUtilities.invokeLater(() -> { m = s; yMin = 0; yMax = s.sy; tx = s.sx / 2f; ty = s.sy / 2f; tz = s.sz / 2f; dist = Math.max(s.sx, Math.max(s.sy, s.sz)) * 1.6f; yaw = 0.8f; pitch = 0.5f; onLoaded.run(); dirty = true; repaint(); });
+                SwingUtilities.invokeLater(() -> { m = s; yMin = 0; yMax = s.sy; tx = s.sx / 2f; ty = s.sy / 2f; tz = s.sz / 2f; dist = Math.max(s.sx, Math.max(s.sy, s.sz)) * 1.6f; yaw = 0.8f; pitch = 0.5f; shown = null; lastMs = 0; onLoaded.run(); dirty = true; repaint(); });
             } catch (Throwable ex) { SwingUtilities.invokeLater(() -> { hint = "Fehler: " + ex.getMessage(); m = null; onLoaded.run(); repaint(); }); }
-        }, "schem-load").start();
+        }, "schem-load") {{ setPriority(Thread.MIN_PRIORITY + 1); setDaemon(true); }}.start();
     }
 
     public void reset() { if (m == null) return; dirty = true; tx = m.sx / 2f; ty = m.sy / 2f; tz = m.sz / 2f; dist = Math.max(m.sx, Math.max(m.sy, m.sz)) * 1.6f; yaw = 0.8f; pitch = 0.5f; repaint(); }
@@ -79,34 +84,53 @@ public final class SchemView extends JComponent {
         int W = getWidth(), H = getHeight();
         Shape clip = new RoundRectangle2D.Float(0, 0, W, H, 26, 26);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setPaint(new GradientPaint(0, 0, new Color(12, 14, 40, 120), 0, H, new Color(30, 40, 90, 90)));
+        g.setPaint(new GradientPaint(0, 0, new Color(40, 8, 8, 120), 0, H, new Color(90, 24, 24, 90)));
         g.fill(clip);
         g.setClip(clip);
         if (m == null || m.count == 0) {
             g.setFont(Cloud.font(Font.PLAIN, 15f)); g.setColor(new Color(255, 255, 255, 190));
             FontMetrics fm = g.getFontMetrics(); g.drawString(hint, (W - fm.stringWidth(hint)) / 2, H / 2);
-        } else if (fast) {
-            int lw = Math.max(1, W / 2), lh = Math.max(1, H / 2);
-            if (lo == null || lo.getWidth() != lw || lo.getHeight() != lh) lo = new java.awt.image.BufferedImage(lw, lh, java.awt.image.BufferedImage.TYPE_INT_ARGB);
-            Graphics2D lg = lo.createGraphics(); lg.setComposite(AlphaComposite.Clear); lg.fillRect(0, 0, lw, lh); lg.setComposite(AlphaComposite.SrcOver);
-            render(lg, lw, lh, false); lg.dispose();
-            g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
-            g.drawImage(lo, 0, 0, W, H, null);
         } else {
-            // Vollbild nur neu rechnen, wenn sich etwas geaendert hat (sonst gecachtes Bild zeichnen -> kein Flackern, keine Last)
-            if (full == null || full.getWidth() != W || full.getHeight() != H) { full = new java.awt.image.BufferedImage(Math.max(1, W), Math.max(1, H), java.awt.image.BufferedImage.TYPE_INT_ARGB); dirty = true; }
-            if (dirty) {
-                Graphics2D fg = full.createGraphics(); fg.setComposite(AlphaComposite.Clear); fg.fillRect(0, 0, W, H); fg.setComposite(AlphaComposite.SrcOver);
-                render(fg, W, H, true); fg.dispose(); dirty = false;
+            if (dirty) { dirty = false; requestRender(); }
+            java.awt.image.BufferedImage img = shown;
+            if (img != null) {
+                g.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+                g.drawImage(img, 0, 0, W, H, null);
+            } else {
+                g.setFont(Cloud.font(Font.PLAIN, 15f)); g.setColor(new Color(255, 255, 255, 190));
+                String t = "Berechne Ansicht …"; FontMetrics fm = g.getFontMetrics(); g.drawString(t, (W - fm.stringWidth(t)) / 2, H / 2);
             }
-            g.drawImage(full, 0, 0, null);
         }
         g.setClip(null);
         g.setColor(new Color(255, 255, 255, 70)); g.setStroke(new BasicStroke(1.2f)); g.draw(new RoundRectangle2D.Float(0.5f, 0.5f, W - 1, H - 1, 26, 26));
         g.dispose();
     }
 
-    private void render(Graphics2D g, int W, int H, boolean text) {
+    /** Kamera-Stand einfrieren und im Hintergrund rendern; veraltete Auftraege werden uebersprungen. */
+    private void requestRender() {
+        final Schem mm = m; if (mm == null) return;
+        final int W = Math.max(1, getWidth()), H = Math.max(1, getHeight());
+        final boolean f = fast;
+        // Beim Drehen: niedrigere Aufloesung, je nach Dauer des letzten Bildes
+        final int div = !f ? 1 : lastMs > 60 ? 3 : 2;
+        final float[] cam = {yaw, pitch, dist, tx, ty, tz, yMin, yMax};
+        final int id = gen.incrementAndGet();
+        worker.execute(() -> {
+            if (id != gen.get()) return;
+            long t0 = System.nanoTime();
+            int w = Math.max(1, W / div), h = Math.max(1, H / div);
+            java.awt.image.BufferedImage img = new java.awt.image.BufferedImage(w, h, java.awt.image.BufferedImage.TYPE_INT_ARGB_PRE);
+            Graphics2D g = img.createGraphics();
+            boolean done = render(g, w, h, !f, mm, cam, id);
+            g.dispose();
+            if (!done) return;
+            if (f) lastMs = (System.nanoTime() - t0) / 1_000_000;
+            SwingUtilities.invokeLater(() -> { if (id == gen.get() || shown == null) { shown = img; repaint(); } });
+        });
+    }
+
+    private boolean render(Graphics2D g, int W, int H, boolean text, Schem m, float[] cam, int reqId) {
+        float yaw = cam[0], pitch = cam[1], dist = cam[2], tx = cam[3], ty = cam[4], tz = cam[5]; int yMin = (int) cam[6], yMax = (int) cam[7];
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_OFF);
         float cp = (float) Math.cos(pitch), sp = (float) Math.sin(pitch), cy = (float) Math.cos(yaw), sy = (float) Math.sin(yaw);
         float camX = tx + dist * cp * sy, camY = ty + dist * sp, camZ = tz + dist * cp * cy;
@@ -118,7 +142,9 @@ public final class SchemView extends JComponent {
         if (keys.length < n * 6) { keys = new long[n * 6]; fcol = new int[n * 6]; vx = new float[n * 6 * 4]; vy = new float[n * 6 * 4]; }
         int fc = 0;
         final float[] B = m.box;
+        float minPx = text ? 1f : 1.5f;
         for (int i = 0; i < n; i++) {
+            if ((i & 8191) == 0 && reqId != gen.get()) return false; // neuere Ansicht angefordert
             int row = m.cellY[i]; if (row < yMin || row >= yMax) continue;
             int mask = m.exposed[i] & 63;
             if (m.full[i]) { if (row == yMax - 1) mask |= (m.hidden[i] & 8); if (row == yMin) mask |= (m.hidden[i] & 4); }
@@ -142,7 +168,7 @@ public final class SchemView extends JComponent {
                 if (!ok) continue;
                 float mnx = Math.min(Math.min(vx[base], vx[base + 1]), Math.min(vx[base + 2], vx[base + 3])), mxx = Math.max(Math.max(vx[base], vx[base + 1]), Math.max(vx[base + 2], vx[base + 3]));
                 float mny = Math.min(Math.min(vy[base], vy[base + 1]), Math.min(vy[base + 2], vy[base + 3])), mxy = Math.max(Math.max(vy[base], vy[base + 1]), Math.max(vy[base + 2], vy[base + 3]));
-                if (mxx < 0 || mxy < 0 || mnx > W || mny > H || (mxx - mnx < 1f && mxy - mny < 1f)) continue;
+                if (mxx < 0 || mxy < 0 || mnx > W || mny > H || (mxx - mnx < minPx && mxy - mny < minPx)) continue;
                 float light = f == 3 ? 1f : f == 2 ? 0.5f : (f < 2 ? 0.8f : 0.66f);
                 int c = m.rgb[i]; int hsh = (i * 2654435761L > 0 ? (int) ((i * 2654435761L >>> 7) & 15) : 0);
                 float j = 0.96f + hsh / 16f * 0.08f; light *= j;
@@ -153,17 +179,21 @@ public final class SchemView extends JComponent {
                 fc++;
             }
         }
+        if (reqId != gen.get()) return false;
         Arrays.sort(keys, 0, fc);
+        if (reqId != gen.get()) return false;
         for (int k = fc - 1; k >= 0; k--) { // weit -> nah
             int id = (int) (keys[k] & 0xFFFFFFFFL), base = id * 4;
             for (int v = 0; v < 4; v++) { px[v] = Math.round(vx[base + v]); py[v] = Math.round(vy[base + v]); }
             int col = fcol[id];
-            g.setColor(new Color(col, (col >>> 24) != 255));
+            Color cc = colors.get(col); if (cc == null) { cc = new Color(col, (col >>> 24) != 255); colors.put(col, cc); }
+            g.setColor(cc);
             g.fillPolygon(px, py, 4);
         }
-        if (!text) return;
+        if (!text) return true;
         g.setFont(Cloud.font(Font.PLAIN, 12f)); g.setColor(new Color(255, 255, 255, 170));
         g.drawString("Ziehen: drehen · Shift/Rechtsklick: verschieben · Mausrad: zoomen (auch hinein)", 14, H - 12);
+        return true;
     }
 
     private final float[] qbuf = new float[12];

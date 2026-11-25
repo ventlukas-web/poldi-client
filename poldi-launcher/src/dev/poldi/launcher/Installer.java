@@ -18,7 +18,7 @@ public final class Installer {
     public static Path mods() { return Config.instance().resolve("mods"); }
     public static final Path VERS = Config.GAME.resolve("versions");
 
-    public record Spec(List<Path> classpath, String mainClass, List<Object> jvm, List<Object> game, String assetIndex, String versionId, int javaMajor) {}
+    public record Spec(List<Path> classpath, String mainClass, List<Object> jvm, List<Object> game, String assetIndex, String versionId, int javaMajor, Path java) {}
     public record News(String tag, String title, String body) {}
 
     private static final String OS = System.getProperty("os.name", "").toLowerCase().contains("win") ? "windows"
@@ -89,7 +89,7 @@ public final class Installer {
 
         // Bibliotheken (Fabric zuerst, Duplikate: Fabric gewinnt)
         List<Object[]> dl = new ArrayList<>(); // {url, path, sha1}
-        List<Path> cp = new ArrayList<>(); Set<String> seen = new HashSet<>();
+        List<Path> cp = new ArrayList<>(); Set<String> seen = new HashSet<>(); List<Path> nativeJars = new ArrayList<>();
         for (Map<String, Object> prof : List.of(fabric, vanilla)) {
             for (Object o : Json.arr(prof.get("libraries"))) {
                 Map<String, Object> lib = Json.obj(o);
@@ -101,6 +101,12 @@ public final class Installer {
                 else { path = mavenPath(name); String base = Json.str(lib.get("url")); if (base.isEmpty()) base = "https://libraries.minecraft.net/"; if (!base.endsWith("/")) base += "/"; url = base + path; sha = Json.str(lib.get("sha1")); }
                 if (!seen.add(libKey(name) + (art.isEmpty() ? "" : ""))) continue;
                 dl.add(new Object[]{url, path, sha}); cp.add(LIB.resolve(path));
+                // Aeltere Versionen (bis 1.18): Natives stecken als "classifier" in derselben Bibliothek
+                String nk = Json.str(Json.obj(lib.get("natives")).get(OS)).replace("${arch}", System.getProperty("os.arch", "").contains("64") ? "64" : "32");
+                if (!nk.isEmpty()) {
+                    Map<String, Object> na = Json.obj(Json.obj(Json.obj(lib.get("downloads")).get("classifiers")).get(nk));
+                    if (!na.isEmpty()) { String np = Json.str(na.get("path")); dl.add(new Object[]{Json.str(na.get("url")), np, Json.str(na.get("sha1"))}); nativeJars.add(LIB.resolve(np)); }
+                }
             }
         }
         Map<String, Object> client = Json.obj(Json.obj(vanilla.get("downloads")).get("client"));
@@ -114,6 +120,12 @@ public final class Installer {
             Http.download((String) x[0], dest, (String) x[2]);
             progress.accept("Bibliotheken " + done.incrementAndGet() + "/" + n, 0.05 + 0.25 * done.get() / n);
         });
+
+        extractNatives(nativeJars);
+
+        // Java: passende Laufzeit von Mojang (z. B. Java 25 fuer 26.x, Java 17 fuer 1.18)
+        String comp = Json.str(Json.obj(vanilla.get("javaVersion")).get("component"));
+        Path java = JavaRuntime.ensure(comp, javaMajor, progress);
 
         // Assets
         Map<String, Object> ai = Json.obj(vanilla.get("assetIndex"));
@@ -139,7 +151,23 @@ public final class Installer {
         List<Object> game = new ArrayList<>(Json.arr(Json.obj(vanilla.get("arguments")).get("game")));
         game.addAll(Json.arr(Json.obj(fabric.get("arguments")).get("game")));
         progress.accept("Bereit", 1.0);
-        return new Spec(cp, Json.str(fabric.get("mainClass")), jvm, game, aid, fid, javaMajor);
+        return new Spec(cp, Json.str(fabric.get("mainClass")), jvm, game, aid, fid, javaMajor, java);
+    }
+
+    /** Natives-Jars (alte Versionen) in den natives-Ordner der Instanz entpacken. */
+    private static void extractNatives(List<Path> jars) throws IOException {
+        Path dir = Config.instance().resolve("natives"); Files.createDirectories(dir);
+        for (Path j : jars) {
+            try (var z = new java.util.zip.ZipFile(j.toFile())) {
+                for (var en = z.entries(); en.hasMoreElements(); ) {
+                    var e = en.nextElement(); String n = e.getName();
+                    if (e.isDirectory() || n.startsWith("META-INF") || n.contains("..")) continue;
+                    Path out = dir.resolve(n.substring(n.lastIndexOf('/') + 1));
+                    if (Files.isRegularFile(out) && Files.size(out) == e.getSize()) continue;
+                    try (var in = z.getInputStream(e)) { Files.copy(in, out, StandardCopyOption.REPLACE_EXISTING); } catch (IOException ignored) { } // Datei evtl. gerade gesperrt
+                }
+            }
+        }
     }
 
     private static String cachedText(String url, Path cache) throws IOException {
@@ -171,7 +199,7 @@ public final class Installer {
         if (Config.mc.equals(Config.CLIENT_MC)) {
             if (!hasJar(MOD)) extractBundled();
             try {
-                Map<String, Object> rel = Json.obj(Json.parse(Http.get("https://api.github.com/repos/" + Config.CLIENT_REPO + "/releases/tags/" + Config.RELEASE_TAG, Map.of("Accept", "application/vnd.github+json"))));
+                Map<String, Object> rel = modRelease();
                 for (Object o : Json.arr(rel.get("assets"))) {
                     Map<String, Object> a = Json.obj(o); String nm = Json.str(a.get("name"));
                     if (nm.startsWith(MOD) && nm.endsWith(".jar") && !nm.contains("sources") && !nm.contains("dev")) {
@@ -187,7 +215,7 @@ public final class Installer {
             } catch (IOException e) {
                 if (!hasJar(MOD) && !extractBundled()) throw new IOException("Poldi Client Mod konnte nicht geladen werden: " + e.getMessage());
             }
-            if (!hasJar(MOD)) throw new IOException("Poldi Client Mod fehlt (noch keine Jar im Release " + Config.RELEASE_TAG + ").");
+            if (!hasJar(MOD)) throw new IOException("Poldi Client Mod fehlt (kein Release mit Jar auf GitHub).");
         }
         // Fabric API (Modrinth)
         try {
@@ -210,6 +238,16 @@ public final class Installer {
     }
 
     static final String MOD = "poldi-client";
+
+    /** Neuestes Release, das eine poldi-client-Jar enthaelt (Mod-Builds heissen build-N). */
+    static Map<String, Object> modRelease() throws IOException {
+        for (Object o : Json.arr(Json.parse(Http.get("https://api.github.com/repos/" + Config.CLIENT_REPO + "/releases?per_page=30", Map.of("Accept", "application/vnd.github+json"))))) {
+            Map<String, Object> r = Json.obj(o);
+            if (Boolean.TRUE.equals(r.get("draft"))) continue;
+            for (Object x : Json.arr(r.get("assets"))) { String nm = Json.str(Json.obj(x).get("name")); if (nm.startsWith(MOD) && nm.endsWith(".jar")) return r; }
+        }
+        throw new IOException("kein Release mit " + MOD + "-Jar gefunden");
+    }
 
     /** Im Launcher eingebaute Poldi-Client-Jar (bundled/poldi-client.jar) in den Mods-Ordner kopieren. */
     private static boolean extractBundled() {
@@ -252,7 +290,7 @@ public final class Installer {
     /** Changelog vom neuesten GitHub-Release. */
     public static News news(Config cfg) {
         try {
-            Map<String, Object> rel = Json.obj(Json.parse(Http.get("https://api.github.com/repos/" + Config.CLIENT_REPO + "/releases/tags/" + Config.RELEASE_TAG, Map.of("Accept", "application/vnd.github+json"))));
+            Map<String, Object> rel = modRelease();
             String body = Json.str(rel.get("body")).replace("\r", "");
             return new News(Json.str(rel.get("tag_name")), Json.str(rel.get("name")), body.isBlank() ? "Keine Beschreibung zu diesem Release." : body);
         } catch (Exception e) { return new News("", "Keine News", "News konnten nicht geladen werden.\n(" + e.getMessage() + ")"); }

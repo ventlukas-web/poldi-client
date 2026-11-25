@@ -43,10 +43,10 @@ public final class Main extends JPanel {
         for (JPanel p : new JPanel[]{play, mods, schem, news, settings, support}) { p.setOpaque(false); p.setBounds(262, 78, 696, 520); add(p); }
         show(0); refreshAccount(); startGreeting(); checkLauncherUpdate();
         // Wolken-Animation: nur wenn sie sichtbar etwas bringt (nicht beim Fensterziehen, nicht im Schematic-Tab, nicht im Hintergrund), 20 fps
-        new Timer(50, e -> {
+        new Timer(66, e -> {
             if (dragging || tab == 2 || frame == null || !frame.isActive()) return;
-            for (float[] c : clouds) { c[0] += c[3] * 1.5f; if (c[0] > W + 200) c[0] = -260; }
-            repaint();
+            for (float[] c : clouds) { c[0] += c[3] * 2f; if (c[0] > W + 200) c[0] = -260; }
+            bgDirty = true; repaint();
         }).start();
         reloadNews();
     }
@@ -410,6 +410,17 @@ public final class Main extends JPanel {
         Btn open = new Btn("Datei öffnen", true, this::openSchem); open.setBounds(416, 32, 140, 34); schem.add(open);
         Btn rst = new Btn("Reset", false, () -> sview.reset()); rst.setBounds(566, 32, 90, 34); schem.add(rst);
         sview = new SchemView(); sview.setBounds(40, 80, 616, 360); schem.add(sview);
+        // .litematic irgendwo aufs Fenster ziehen -> Schematics-Tab oeffnen und laden
+        setTransferHandler(new TransferHandler() {
+            public boolean canImport(TransferSupport t) { return t.isDataFlavorSupported(java.awt.datatransfer.DataFlavor.javaFileListFlavor); }
+            @SuppressWarnings("unchecked") public boolean importData(TransferSupport t) {
+                try {
+                    var l = (java.util.List<File>) t.getTransferable().getTransferData(java.awt.datatransfer.DataFlavor.javaFileListFlavor);
+                    if (l.isEmpty() || !l.get(0).getName().toLowerCase().endsWith(".litematic")) return false;
+                    show(2); sInfo.setText("Lade …"); sview.loadAsync(l.get(0)); return true;
+                } catch (Exception e) { return false; }
+            }
+        });
         sview.onLoaded = () -> {
             Schem s = sview.model();
             if (s == null) { sInfo.setText("Fehler beim Laden"); return; }
@@ -469,7 +480,7 @@ public final class Main extends JPanel {
                     name = s.name(); uuid = s.uuid(); token = s.accessToken();
                 }
                 Installer.Spec spec = Installer.prepare(cfg, (t, p) -> setStatus(t, p));
-                if (Runtime.version().feature() < spec.javaMajor()) throw new IOException("Java " + spec.javaMajor() + " nötig, im Launcher steckt Java " + Runtime.version().feature() + ".");
+                if (spec.java() == null && Runtime.version().feature() < spec.javaMajor()) throw new IOException("Java " + spec.javaMajor() + " nötig, im Launcher steckt Java " + Runtime.version().feature() + ".");
                 SwingUtilities.invokeLater(this::refreshInstalled);
                 setStatus("Minecraft startet …", 1.0);
                 game = Launch.start(spec, cfg, name, uuid, token);
@@ -485,20 +496,39 @@ public final class Main extends JPanel {
     static void openFile(File f) { try { if (f.isDirectory() || f.exists()) Desktop.getDesktop().open(f); } catch (Exception ignored) {} }
 
     // ---------- Zeichnen ----------
+    // Hintergrund wird nur neu gezeichnet, wenn sich etwas aendert (Wolken-Tick, Tab-Wechsel).
+    // Beim Fensterziehen wird nur das fertige Bild kopiert -> kein Ruckeln.
+    BufferedImage bgCache; int bgTab = -1; boolean bgDirty = true;
+    BufferedImage[] cloudSprites;
+
     @Override protected void paintComponent(Graphics g0) {
-        Graphics2D g = (Graphics2D) g0.create(); hints(g);
+        if (bgCache == null || bgDirty || bgTab != tab) { renderBackground(); bgDirty = false; bgTab = tab; }
+        g0.drawImage(bgCache, 0, 0, null);
+    }
+
+    void renderBackground() {
+        if (bgCache == null) bgCache = new BufferedImage(W, H, BufferedImage.TYPE_INT_ARGB_PRE);
+        if (cloudSprites == null) {
+            cloudSprites = new BufferedImage[clouds.size()];
+            for (int i = 0; i < clouds.size(); i++) {
+                float[] c = clouds.get(i); int sw = (int) (440 * c[2]) + 20, sh = (int) (350 * c[2]) + 20;
+                BufferedImage im = new BufferedImage(sw, sh, BufferedImage.TYPE_INT_ARGB_PRE);
+                Graphics2D cg = im.createGraphics(); hints(cg); blob(cg, 110 * c[2] + 10, 140 * c[2] + 10, c[2], (int) c[4]); cg.dispose();
+                cloudSprites[i] = im;
+            }
+        }
+        Graphics2D g = bgCache.createGraphics(); hints(g);
+        g.setComposite(AlphaComposite.Clear); g.fillRect(0, 0, W, H); g.setComposite(AlphaComposite.SrcOver);
         Shape win = new RoundRectangle2D.Float(0, 0, W, H, 34, 34);
         g.setClip(win);
         g.setPaint(new GradientPaint(0, 0, new Color(0x3B, 0x0A, 0x0A), 0, H, new Color(0xC2, 0x2B, 0x2B)));
         g.fill(win);
         g.setPaint(new RadialGradientPaint(new Point2D.Float(W * 0.25f, H * 0.2f), 520, new float[]{0, 1}, new Color[]{new Color(248, 113, 113, 120), new Color(248, 113, 113, 0)}));
         g.fillRect(0, 0, W, H);
-        for (float[] c : clouds) blob(g, c[0], c[1], c[2], (int) c[4]);
-        // Titel
+        for (int i = 0; i < clouds.size(); i++) { float[] c = clouds.get(i); g.drawImage(cloudSprites[i], (int) (c[0] - 110 * c[2] - 10), (int) (c[1] - 140 * c[2] - 10), null); }
         if (logo != null) g.drawImage(logo, 22, 10, 38, 38, null);
         g.setFont(font(Font.BOLD, 20f)); String t = "Poldi Client"; int x = 70;
         for (int i = 0; i < t.length(); i++) { g.setColor(mix(PURPLE, BLUE, i / (float) (t.length() - 1))); g.drawString(String.valueOf(t.charAt(i)), x, 36); x += g.getFontMetrics().charWidth(t.charAt(i)); }
-        // Karten
         card(g, 22, 96, 220, 502, 30, true, 40);
         card(g, 262, 96, 696, 502, 34, true, 36);
         g.setColor(new Color(255, 255, 255, 60)); g.drawLine(42, 462, 222, 462);
@@ -529,9 +559,13 @@ public final class Main extends JPanel {
             try { f.setIconImage(m.logo); } catch (Exception ignored) {}
             MouseAdapter drag = new MouseAdapter() {
                 Point o;
-                public void mousePressed(MouseEvent e) { o = e.getPoint(); Main.dragging = e.getY() < 70; }
-                public void mouseReleased(MouseEvent e) { Main.dragging = false; }
-                public void mouseDragged(MouseEvent e) { if (o != null && o.y < 70) { Point p = f.getLocation(); f.setLocation(p.x + e.getX() - o.x, p.y + e.getY() - o.y); } }
+                // Bildschirm-Koordinaten statt Fenster-Koordinaten: sonst springt das Fenster beim Ziehen hin und her
+                public void mousePressed(MouseEvent e) {
+                    Main.dragging = e.getY() < 70;
+                    o = Main.dragging ? new Point(e.getXOnScreen() - f.getX(), e.getYOnScreen() - f.getY()) : null;
+                }
+                public void mouseReleased(MouseEvent e) { Main.dragging = false; o = null; }
+                public void mouseDragged(MouseEvent e) { if (o != null) f.setLocation(e.getXOnScreen() - o.x, e.getYOnScreen() - o.y); }
             };
             m.addMouseListener(drag); m.addMouseMotionListener(drag);
             f.setVisible(true);
