@@ -1,7 +1,5 @@
 package dev.poldi.client;
 
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphicsExtractor;
 import net.minecraft.client.gui.components.AbstractButton;
 import net.minecraft.client.gui.narration.NarrationElementOutput;
@@ -10,7 +8,7 @@ import net.minecraft.network.chat.Component;
 
 import java.util.function.Supplier;
 
-/** Button im roten Vanilla-Stil (eckig, Bevel-Kanten). Beschriftung kommt live aus einem Supplier. */
+/** Button mit der echten Minecraft-Button-Grafik. Beschriftung kommt live aus einem Supplier; "accent" = hervorgehoben (weisser Rand). */
 public class PoldiButton extends AbstractButton {
     private final Supplier<String> label;
     private final Runnable action;
@@ -23,6 +21,7 @@ public class PoldiButton extends AbstractButton {
         this.label = label;
         this.action = action;
         this.accent = accent;
+        setOverrideRenderHighlightedSprite(() -> this.accent && this.active);
     }
 
     public String label() {
@@ -41,20 +40,10 @@ public class PoldiButton extends AbstractButton {
     @Override
     protected void extractContents(GuiGraphicsExtractor g, int mouseX, int mouseY, float delta) {
         if (hidden) return;
-        int x = getX(), y = getY(), w = getWidth(), h = getHeight();
-        boolean hov = this.active && isHovered();
-        int base = baseColor(accent);
-        if (hov) base = PoldiTheme.lerp(base, PoldiTheme.PRIMARY, 0.45f);
-        PoldiTheme.bevel(g, x, y, w, h, base, hov, this.active);
-        Font f = Minecraft.getInstance().font;
         String s = label();
-        int maxW = w - 8;
-        if (f.width(PoldiTheme.ui(s)) > maxW) {
-            while (s.length() > 1 && f.width(PoldiTheme.ui(s + "…")) > maxW) s = s.substring(0, s.length() - 1);
-            s = s + "…";
-        }
-        Component t = PoldiTheme.ui(s);
-        g.text(f, t, x + (w - f.width(t)) / 2, y + (h - 8) / 2, this.active ? PoldiTheme.TEXT : 0xFFA09090, true);
+        if (!s.equals(getMessage().getString())) setMessage(Component.literal(s));
+        extractDefaultSprite(g);
+        extractDefaultLabel(g.textRendererForWidget(this, GuiGraphicsExtractor.HoveredTextEffects.NONE));
     }
 
     @Override

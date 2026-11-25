@@ -151,7 +151,7 @@ public class PoldiTrailerScreen extends PoldiScreen {
     private void panel(float x, float y, float w, float h, float a) {
         rect(x, y, w, h, 0x140606, .88f * a);
         outline(x, y, w, h, 0x000000, a);
-        outline(x + 1, y + 1, w - 2, h - 2, PoldiTheme.PRIMARY, .56f * a);
+        outline(x + 1, y + 1, w - 2, h - 2, PoldiTheme.RED, .56f * a);
     }
 
     private void panel(float x, float y, float w, float h) { panel(x, y, w, h, 1); }
@@ -177,7 +177,7 @@ public class PoldiTrailerScreen extends PoldiScreen {
 
     private void button(String label, float x, float y, float w, float h, boolean accent, boolean hover) {
         int base = accent ? accBase() : btnBase();
-        if (hover) base = PoldiTheme.lerp(base | 0xFF000000, PoldiTheme.PRIMARY, .45f) & 0xFFFFFF;
+        if (hover) base = PoldiTheme.lerp(base | 0xFF000000, PoldiTheme.RED, .45f) & 0xFFFFFF;
         bevel(x, y, w, h, base, hover);
         text(label, x + w / 2, y + (h - 8) / 2 - 1, 0xFFFFFF, 8, 1, false, 1);
     }
@@ -192,14 +192,14 @@ public class PoldiTrailerScreen extends PoldiScreen {
     private void slideFrame(String title, String sub) {
         panel(-SW / 2f, -SH / 2f, SW, SH);
         logo(-SW / 2f + 10, -SH / 2f + 8, 14);
-        text(title, -SW / 2f + 30, -SH / 2f + 10, PoldiTheme.PRIMARY, 10, 1, true, 0);
+        text(title, -SW / 2f + 30, -SH / 2f + 10, PoldiTheme.RED, 10, 1, true, 0);
         if (sub != null) text(sub, SW / 2f - 10, -SH / 2f + 12, 0xC9B4B4, 7, 1, false, 2);
     }
 
     private void toggleRow(String label, boolean on, float x, float y, float w) { button(label + ": " + (on ? "AN" : "AUS"), x, y, w, 18, on, false); }
 
     private void slide(int i, float t) {
-        int P = PoldiTheme.PRIMARY & 0xFFFFFF, MUT = 0xC9B4B4;
+        int P = PoldiTheme.RED & 0xFFFFFF, MUT = 0xC9B4B4;
         switch (i) {
             case 0 -> {
                 logo(-34, -88, 68);
@@ -266,7 +266,7 @@ public class PoldiTrailerScreen extends PoldiScreen {
                 String[] mods = {"Licht-Overlay", "Koordinaten", "Keystrokes", "Tag-Zähler", "Fullbright"};
                 for (int k = 0; k < mods.length; k++) {
                     float w = f.width(PoldiTheme.ui(mods[k])) * 8 / 9f + 10, x = SW / 2f - 14 - w, y = -SH / 2f + 30 + k * 13;
-                    int c = PoldiTheme.lerp(PoldiTheme.PRIMARY, PoldiTheme.SECOND, k / 4f) & 0xFFFFFF;
+                    int c = PoldiTheme.lerp(PoldiTheme.RED, PoldiTheme.RED2, k / 4f) & 0xFFFFFF;
                     rect(x, y, w, 12, 0x140606, .8f);
                     rect(SW / 2f - 16, y, 2, 12, c);
                     text(mods[k], x + 4, y + 2, c, 8);
@@ -300,7 +300,7 @@ public class PoldiTrailerScreen extends PoldiScreen {
                     if (ab % 45 == 0) text(dirs[ab / 45], px, SH / 2f - 47, ab == 0 ? P : 0xFFFFFF, 8, 1, false, 1);
                     else rect(px, SH / 2f - 45, 1, 4, MUT, .6f);
                 }
-                rect(0, SH / 2f - 38, 1, 4, PoldiTheme.SECOND & 0xFFFFFF);
+                rect(0, SH / 2f - 38, 1, 4, PoldiTheme.RED2 & 0xFFFFFF);
             }
             case 5 -> {
                 slideFrame("Streaming", "Twitch · YouTube");
@@ -335,7 +335,7 @@ public class PoldiTrailerScreen extends PoldiScreen {
     }
 
     private void key(float x, float y, float w, float h, String l, boolean down) {
-        bevel(x, y, w, h, down ? PoldiTheme.PRIMARY & 0xFFFFFF : btnBase(), false);
+        bevel(x, y, w, h, down ? PoldiTheme.RED & 0xFFFFFF : btnBase(), false);
         text(l, x + w / 2, y + (h - 8) / 2 - 1, 0xFFFFFF, 8, 1, false, 1);
     }
 
@@ -346,7 +346,7 @@ public class PoldiTrailerScreen extends PoldiScreen {
         g.pose().rotate(cam.rot());
         g.pose().scale(cam.z(), cam.z());
         g.pose().translate(-cam.cx(), -cam.cy());
-        int line = argb(PoldiTheme.PRIMARY, .07f), gs = 48;
+        int line = argb(PoldiTheme.RED, .07f), gs = 48;
         int x0 = (int) Math.floor((cam.cx() - 900) / gs) * gs, y0 = (int) Math.floor((cam.cy() - 900) / gs) * gs;
         int top = (int) (cam.cy() - 900), bot = (int) (cam.cy() + 900), lft = (int) (cam.cx() - 900), rgt = (int) (cam.cx() + 900);
         for (int x = x0; x < cam.cx() + 900; x += gs) g.fill(x, top, x + 1, bot, line);
@@ -356,7 +356,7 @@ public class PoldiTrailerScreen extends PoldiScreen {
             float seed = i * 37.17f, px = (float) ((Math.sin(seed) * .5 + .5) * VW), sp = 14 + (i % 7) * 5;
             float py = VH - ((t * sp + (seed % 90) * 4) % (VH + 20));
             float a = .5f * (float) (.4 + .6 * Math.abs(Math.sin(t * 2 + i)));
-            rect(px, py, 2, 2, i % 3 != 0 ? 0xFF8A3C : PoldiTheme.SECOND & 0xFFFFFF, a);
+            rect(px, py, 2, 2, i % 3 != 0 ? 0xFF8A3C : PoldiTheme.RED2 & 0xFFFFFF, a);
         }
     }
 
