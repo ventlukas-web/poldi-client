@@ -44,7 +44,7 @@ jobs:
         run: |
           mkdir -p dist
           javac -encoding UTF-8 -d out $(find src -name "*.java")
-          cp res/logo.png out/
+          cp res/logo.png res/PoldiPixel.ttf out/
           date -u +%Y-%m-%dT%H:%M:%SZ > out/build.txt
           printf 'Main-Class: dev.poldi.launcher.Main\n' > manifest.txt
           jar cfm dist/poldi-launcher.jar manifest.txt -C out .

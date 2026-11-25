@@ -82,9 +82,9 @@ public final class SchemView extends JComponent {
     @Override protected void paintComponent(Graphics g0) {
         Graphics2D g = (Graphics2D) g0.create();
         int W = getWidth(), H = getHeight();
-        Shape clip = new RoundRectangle2D.Float(0, 0, W, H, 26, 26);
+        Shape clip = new Rectangle(0, 0, W, H);
         g.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g.setPaint(new GradientPaint(0, 0, new Color(40, 8, 8, 120), 0, H, new Color(90, 24, 24, 90)));
+        g.setColor(new Color(0, 0, 0, 160));
         g.fill(clip);
         g.setClip(clip);
         if (m == null || m.count == 0) {
@@ -102,7 +102,7 @@ public final class SchemView extends JComponent {
             }
         }
         g.setClip(null);
-        g.setColor(new Color(255, 255, 255, 70)); g.setStroke(new BasicStroke(1.2f)); g.draw(new RoundRectangle2D.Float(0.5f, 0.5f, W - 1, H - 1, 26, 26));
+        g.setColor(Color.BLACK); g.setStroke(new BasicStroke(2f)); g.drawRect(1, 1, W - 2, H - 2);
         g.dispose();
     }
 
@@ -191,7 +191,7 @@ public final class SchemView extends JComponent {
             g.fillPolygon(px, py, 4);
         }
         if (!text) return true;
-        g.setFont(Cloud.font(Font.PLAIN, 12f)); g.setColor(new Color(255, 255, 255, 170));
+        g.setFont(Cloud.font(Font.PLAIN, 11f)); g.setColor(new Color(255, 255, 255, 170));
         g.drawString("Ziehen: drehen · Shift/Rechtsklick: verschieben · Mausrad: zoomen (auch hinein)", 14, H - 12);
         return true;
     }

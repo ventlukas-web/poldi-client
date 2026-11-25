@@ -44,6 +44,7 @@ public final class Main extends JPanel {
         show(0); refreshAccount(); startGreeting(); checkLauncherUpdate();
         // Wolken-Animation: nur wenn sie sichtbar etwas bringt (nicht beim Fensterziehen, nicht im Schematic-Tab, nicht im Hintergrund), 20 fps
         new Timer(66, e -> {
+            if (true) return;
             if (dragging || tab == 2 || frame == null || !frame.isActive()) return;
             for (float[] c : clouds) { c[0] += c[3] * 2f; if (c[0] > W + 200) c[0] = -260; }
             bgDirty = true; repaint();
@@ -75,7 +76,7 @@ public final class Main extends JPanel {
         postTitle = new Field(""); postTitle.setBounds(40, 342, 616, 34); ownerBox.add(postTitle);
         postText = new JTextArea(); postText.setOpaque(false); postText.setForeground(TEXT); postText.setCaretColor(Color.WHITE); postText.setFont(font(Font.PLAIN, 14f)); postText.setLineWrap(true); postText.setWrapStyleWord(true);
         postText.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        JScrollPane sp = new JScrollPane(postText) { @Override protected void paintComponent(Graphics g0) { Graphics2D g = (Graphics2D) g0.create(); hints(g); g.setColor(new Color(255, 255, 255, 40)); g.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20); g.setColor(new Color(255, 255, 255, 80)); g.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20); g.dispose(); super.paintComponent(g0); } };
+        JScrollPane sp = new JScrollPane(postText) { @Override protected void paintComponent(Graphics g0) { Graphics2D g = (Graphics2D) g0.create(); hints(g); g.setColor(new Color(0xA0, 0xA0, 0xA0)); g.fillRect(0, 0, getWidth(), getHeight()); g.setColor(Color.BLACK); g.fillRect(PX, PX, getWidth() - 2 * PX, getHeight() - 2 * PX); g.dispose(); super.paintComponent(g0); } };
         sp.setOpaque(false); sp.getViewport().setOpaque(false); sp.setBorder(null); styleScroll(sp); sp.setBounds(40, 384, 486, 96); ownerBox.add(sp);
         Btn send = new Btn("Posten", true, this::postNews); send.setBounds(540, 384, 116, 44); ownerBox.add(send);
         Btn tok = new Btn("Token", false, this::askToken); tok.setBounds(540, 436, 116, 34); ownerBox.add(tok);
@@ -195,7 +196,7 @@ public final class Main extends JPanel {
         label(support, "Beschreibung", 40, 230, 300, 20, 13f, Font.BOLD, TEXT, SwingConstants.LEFT);
         supText = new JTextArea(); supText.setOpaque(false); supText.setForeground(TEXT); supText.setCaretColor(Color.WHITE); supText.setFont(font(Font.PLAIN, 14f));
         supText.setLineWrap(true); supText.setWrapStyleWord(true); supText.setBorder(BorderFactory.createEmptyBorder(8, 12, 8, 12));
-        JScrollPane sp = new JScrollPane(supText) { @Override protected void paintComponent(Graphics g0) { Graphics2D g = (Graphics2D) g0.create(); hints(g); g.setColor(new Color(255, 255, 255, 40)); g.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20); g.setColor(new Color(255, 255, 255, 80)); g.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 20, 20); g.dispose(); super.paintComponent(g0); } };
+        JScrollPane sp = new JScrollPane(supText) { @Override protected void paintComponent(Graphics g0) { Graphics2D g = (Graphics2D) g0.create(); hints(g); g.setColor(new Color(0xA0, 0xA0, 0xA0)); g.fillRect(0, 0, getWidth(), getHeight()); g.setColor(Color.BLACK); g.fillRect(PX, PX, getWidth() - 2 * PX, getHeight() - 2 * PX); g.dispose(); super.paintComponent(g0); } };
         sp.setOpaque(false); sp.getViewport().setOpaque(false); sp.setBorder(null); styleScroll(sp); sp.setBounds(40, 254, 616, 160); support.add(sp);
         supInfo = new JLabel(""); supInfo.setFont(font(Font.PLAIN, 13f)); supInfo.setForeground(MUTED); supInfo.setBounds(40, 430, 420, 36); support.add(supInfo);
         Btn send = new Btn("Absenden", true, this::sendSupport); send.setBounds(496, 424, 160, 44); support.add(send);
@@ -234,7 +235,7 @@ public final class Main extends JPanel {
             @Override protected JButton createDecreaseButton(int o) { return zero(); } @Override protected JButton createIncreaseButton(int o) { return zero(); }
             JButton zero() { JButton b = new JButton(); b.setPreferredSize(new Dimension(0, 0)); return b; }
             @Override protected void paintTrack(Graphics g, JComponent c, Rectangle r) {}
-            @Override protected void paintThumb(Graphics g, JComponent c, Rectangle r) { Graphics2D g2 = (Graphics2D) g.create(); hints(g2); g2.setColor(new Color(255, 255, 255, 110)); g2.fillRoundRect(r.x + 2, r.y, 6, r.height, 6, 6); g2.dispose(); }
+            @Override protected void paintThumb(Graphics g, JComponent c, Rectangle r) { Graphics2D g2 = (Graphics2D) g.create(); hints(g2); g2.setColor(new Color(0x80, 0x80, 0x80)); g2.fillRect(r.x + 2, r.y, 6, r.height); g2.setColor(new Color(0xC0, 0xC0, 0xC0)); g2.fillRect(r.x + 2, r.y, 5, r.height - 1); g2.dispose(); }
         });
     }
 
@@ -355,7 +356,7 @@ public final class Main extends JPanel {
 
     JPanel modRow(String title, String sub, String btn, Runnable act) {
         JPanel r = new JPanel(null) {
-            @Override protected void paintComponent(Graphics g0) { Graphics2D g = (Graphics2D) g0.create(); hints(g); g.setColor(new Color(255, 255, 255, 34)); g.fillRoundRect(0, 0, getWidth() - 8, getHeight() - 6, 22, 22); g.setColor(new Color(255, 255, 255, 60)); g.drawRoundRect(0, 0, getWidth() - 9, getHeight() - 7, 22, 22); g.dispose(); }
+            @Override protected void paintComponent(Graphics g0) { Graphics2D g = (Graphics2D) g0.create(); hints(g); g.setColor(new Color(0, 0, 0, 110)); g.fillRect(0, 0, getWidth() - 8, getHeight() - 6); g.setColor(new Color(255, 255, 255, 40)); g.fillRect(0, 0, getWidth() - 8, PX); g.dispose(); }
         };
         r.setOpaque(false); r.setPreferredSize(new Dimension(600, 64)); r.setMaximumSize(new Dimension(Integer.MAX_VALUE, 64));
         JLabel t = new JLabel(title); t.setFont(font(Font.BOLD, 14f)); t.setForeground(TEXT); t.setBounds(16, 8, 400, 22); r.add(t);
@@ -427,11 +428,17 @@ public final class Main extends JPanel {
             sInfo.setText(s.sx + "×" + s.sy + "×" + s.sz + " · " + s.blockCount + " Blöcke");
             sLo.setMaximum(Math.max(1, s.sy - 1)); sLo.setValue(0); sHi.setMinimum(1); sHi.setMaximum(Math.max(1, s.sy)); sHi.setValue(s.sy);
         };
-        label(schem, "Von Ebene", 40, 452, 90, 22, 12f, Font.PLAIN, MUTED, SwingConstants.LEFT);
-        label(schem, "Bis Ebene", 40, 482, 90, 22, 12f, Font.PLAIN, MUTED, SwingConstants.LEFT);
+        label(schem, "Von Ebene", 40, 452, 120, 22, 12f, Font.PLAIN, MUTED, SwingConstants.LEFT);
+        label(schem, "Bis Ebene", 40, 482, 120, 22, 12f, Font.PLAIN, MUTED, SwingConstants.LEFT);
         sLo = new JSlider(0, 1, 0); sHi = new JSlider(1, 1, 1);
-        for (JSlider sl : new JSlider[]{sLo, sHi}) { sl.setOpaque(false); sl.setFocusable(false); }
-        sLo.setBounds(130, 450, 526, 26); sHi.setBounds(130, 480, 526, 26); schem.add(sLo); schem.add(sHi);
+        for (JSlider sl : new JSlider[]{sLo, sHi}) { sl.setOpaque(false); sl.setFocusable(false); sl.setUI(new javax.swing.plaf.basic.BasicSliderUI(sl) {
+            // Vanilla-Schieberegler: dunkle Leiste, Griff wie ein kleiner Button
+            @Override public void paintTrack(Graphics g0) { Graphics2D g = (Graphics2D) g0; g.setColor(Color.BLACK); g.fillRect(trackRect.x, trackRect.y + trackRect.height / 2 - 4, trackRect.width, 8); g.setColor(new Color(0x55, 0x55, 0x55)); g.fillRect(trackRect.x + 2, trackRect.y + trackRect.height / 2 - 2, trackRect.width - 4, 4); }
+            @Override public void paintThumb(Graphics g0) { bevel((Graphics2D) g0, thumbRect.x, thumbRect.y, thumbRect.width, thumbRect.height, new Color(0x6F, 0x6F, 0x6F), false, true); }
+            @Override protected Dimension getThumbSize() { return new Dimension(12, 20); }
+            @Override public void paintFocus(Graphics g) {}
+        }); }
+        sLo.setBounds(160, 450, 496, 26); sHi.setBounds(160, 480, 496, 26); schem.add(sLo); schem.add(sHi);
         sLo.addChangeListener(e -> { if (sLo.getValue() >= sHi.getValue()) sHi.setValue(sLo.getValue() + 1); sview.setRange(sLo.getValue(), sHi.getValue()); });
         sHi.addChangeListener(e -> { if (sHi.getValue() <= sLo.getValue()) sLo.setValue(sHi.getValue() - 1); sview.setRange(sLo.getValue(), sHi.getValue()); });
     }
@@ -508,33 +515,21 @@ public final class Main extends JPanel {
 
     void renderBackground() {
         if (bgCache == null) bgCache = new BufferedImage(W, H, BufferedImage.TYPE_INT_ARGB_PRE);
-        if (cloudSprites == null) {
-            cloudSprites = new BufferedImage[clouds.size()];
-            for (int i = 0; i < clouds.size(); i++) {
-                float[] c = clouds.get(i); int sw = (int) (440 * c[2]) + 20, sh = (int) (350 * c[2]) + 20;
-                BufferedImage im = new BufferedImage(sw, sh, BufferedImage.TYPE_INT_ARGB_PRE);
-                Graphics2D cg = im.createGraphics(); hints(cg); blob(cg, 110 * c[2] + 10, 140 * c[2] + 10, c[2], (int) c[4]); cg.dispose();
-                cloudSprites[i] = im;
-            }
-        }
         Graphics2D g = bgCache.createGraphics(); hints(g);
-        g.setComposite(AlphaComposite.Clear); g.fillRect(0, 0, W, H); g.setComposite(AlphaComposite.SrcOver);
-        Shape win = new RoundRectangle2D.Float(0, 0, W, H, 34, 34);
-        g.setClip(win);
-        g.setPaint(new GradientPaint(0, 0, new Color(0x3B, 0x0A, 0x0A), 0, H, new Color(0xC2, 0x2B, 0x2B)));
-        g.fill(win);
-        g.setPaint(new RadialGradientPaint(new Point2D.Float(W * 0.25f, H * 0.2f), 520, new float[]{0, 1}, new Color[]{new Color(248, 113, 113, 120), new Color(248, 113, 113, 0)}));
-        g.fillRect(0, 0, W, H);
-        for (int i = 0; i < clouds.size(); i++) { float[] c = clouds.get(i); g.drawImage(cloudSprites[i], (int) (c[0] - 110 * c[2] - 10), (int) (c[1] - 140 * c[2] - 10), null); }
-        if (logo != null) g.drawImage(logo, 22, 10, 38, 38, null);
-        g.setFont(font(Font.BOLD, 20f)); String t = "Poldi Client"; int x = 70;
-        for (int i = 0; i < t.length(); i++) { g.setColor(mix(PURPLE, BLUE, i / (float) (t.length() - 1))); g.drawString(String.valueOf(t.charAt(i)), x, 36); x += g.getFontMetrics().charWidth(t.charAt(i)); }
-        card(g, 22, 96, 220, 502, 30, true, 40);
-        card(g, 262, 96, 696, 502, 34, true, 36);
-        g.setColor(new Color(255, 255, 255, 60)); g.drawLine(42, 462, 222, 462);
-        if (tab == 0 && logo != null) { g.drawImage(logo, 698 / 2 + 262 - 60 - 2, 96 + 24, 120, 120, null); }
-        g.setClip(null);
-        g.setColor(new Color(255, 255, 255, 80)); g.setStroke(new BasicStroke(1.5f)); g.draw(win);
+        // Vanilla-Hintergrund: abgedunkelte Netherrack-Kacheln (wie der alte Erde-Hintergrund in Menues)
+        BufferedImage tile = netherTile(); int ts = 64;
+        for (int y = 0; y < H; y += ts) for (int x = 0; x < W; x += ts) g.drawImage(tile, x, y, ts, ts, null);
+        g.setColor(new Color(0, 0, 0, 120)); g.fillRect(0, 0, W, H);
+        // Kopfzeile dunkler + Trennlinie
+        g.setColor(new Color(0, 0, 0, 110)); g.fillRect(0, 0, W, 62);
+        g.setColor(new Color(0, 0, 0, 200)); g.fillRect(0, 62, W, PX); g.setColor(new Color(255, 255, 255, 50)); g.fillRect(0, 62 + PX, W, PX);
+        if (logo != null) g.drawImage(logo, 20, 12, 40, 40, null);
+        g.setFont(font(Font.PLAIN, 30f)); text(g, "Poldi Client", 72, 42, TEXT);
+        card(g, 22, 96, 220, 502, 0, false, 0);
+        card(g, 262, 96, 696, 502, 0, false, 0);
+        g.setColor(new Color(0, 0, 0, 200)); g.fillRect(42, 462, 180, PX); g.setColor(new Color(255, 255, 255, 50)); g.fillRect(42, 462 + PX, 180, PX);
+        if (tab == 0 && logo != null) { g.drawImage(logo, 698 / 2 + 262 - 60, 96 + 24, 120, 120, null); }
+        g.setColor(Color.BLACK); g.fillRect(0, 0, W, PX); g.fillRect(0, H - PX, W, PX); g.fillRect(0, 0, PX, H); g.fillRect(W - PX, 0, PX, H);
         g.dispose();
     }
 
