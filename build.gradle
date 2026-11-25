@@ -29,3 +29,14 @@ java {
     sourceCompatibility = JavaVersion.VERSION_25
     targetCompatibility = JavaVersion.VERSION_25
 }
+
+// Nur fuer automatische Screenshots (Workflow "Poldi Screenshots"), nicht Teil der Mod-Jar
+fabricApi {
+    configureTests {
+        createSourceSet = true
+        modId = "poldi-shots"
+        enableGameTests = false
+        enableClientGameTests = true
+        eula = true
+    }
+}

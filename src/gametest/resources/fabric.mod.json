@@ -1,0 +1,9 @@
+{
+  "schemaVersion": 1,
+  "id": "poldi-shots",
+  "version": "1.0.0",
+  "name": "Poldi Screenshots",
+  "environment": "client",
+  "entrypoints": { "fabric-client-gametest": ["dev.poldi.gametest.PoldiShots"] },
+  "depends": { "poldi": "*" }
+}
